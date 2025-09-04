@@ -46,80 +46,7 @@ A modern, full-featured cake shop e-commerce platform built with React, Firebase
 - **UI Components**: Lucide React Icons
 - **Notifications**: React Toastify
 
-## 📋 Database Structure
 
-### Collections
-
-#### Products
-```javascript
-{
-  id: "string",
-  name: "string",
-  description: "string",
-  price: "number",
-  category: "string",
-  subcategory: "string",
-  image: "string",
-  ingredients: "string",
-  allergens: "string",
-  preparationTime: "string",
-  servingSize: "string",
-  calories: "number",
-  inventory: "number",
-  inStock: "boolean",
-  isActive: "boolean",
-  isFeatured: "boolean",
-  isSeasonal: "boolean",
-  tags: ["array"],
-  rating: "number",
-  reviews: "number",
-  totalSold: "number",
-  averageRating: "number",
-  reviewCount: "number",
-  shopId: "string",
-  createdAt: "timestamp",
-  updatedAt: "timestamp"
-}
-```
-
-#### Orders
-```javascript
-{
-  id: "string",
-  trackingId: "string",
-  userId: "string",
-  shopId: "string",
-  items: ["array"],
-  total: "number",
-  status: "string",
-  orderStatus: "string",
-  deliveryStatus: "string",
-  customerName: "string",
-  customerEmail: "string",
-  customerPhone: "string",
-  deliveryAddress: "string",
-  estimatedDelivery: "timestamp",
-  timeline: ["array"],
-  shopNotes: "string",
-  createdAt: "timestamp",
-  updatedAt: "timestamp"
-}
-```
-
-#### Delivery Tracking
-```javascript
-{
-  id: "string",
-  orderId: "string",
-  trackingId: "string",
-  status: "string",
-  currentLocation: "string",
-  estimatedDelivery: "timestamp",
-  deliveryUpdates: ["array"],
-  createdAt: "timestamp",
-  updatedAt: "timestamp"
-}
-```
 
 ## 🚀 Getting Started
 
@@ -141,21 +68,6 @@ A modern, full-featured cake shop e-commerce platform built with React, Firebase
    npm install
    ```
 
-3. **Firebase Setup**
-   - Create a Firebase project
-   - Enable Authentication, Firestore, and Storage
-   - Update Firebase configuration in `src/firebase/config.js`
-
-4. **Environment Variables**
-   Create a `.env` file in the root directory:
-   ```env
-   REACT_APP_FIREBASE_API_KEY=your_api_key
-   REACT_APP_FIREBASE_AUTH_DOMAIN=your_auth_domain
-   REACT_APP_FIREBASE_PROJECT_ID=your_project_id
-   REACT_APP_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-   REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
-   REACT_APP_FIREBASE_APP_ID=your_app_id
-   ```
 
 5. **Start the development server**
    ```bash
@@ -240,25 +152,9 @@ A modern, full-featured cake shop e-commerce platform built with React, Firebase
 npm run build
 ```
 
-### Deploy to Firebase Hosting
-```bash
-npm install -g firebase-tools
-firebase login
-firebase init hosting
-firebase deploy
 ```
 
-## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License.
 
 ## 🆘 Support
 
