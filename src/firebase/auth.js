@@ -171,3 +171,20 @@ export const getUserData = async (uid) => {
     return null;
   }
 };
+
+// Update user profile
+export const updateUserProfile = async (uid, updateData) => {
+  try {
+    await setDoc(doc(db, 'users', uid), updateData, { merge: true });
+    return {
+      success: true,
+      message: 'Profile updated successfully!'
+    };
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    return {
+      success: false,
+      message: error.message
+    };
+  }
+};

@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useReducer, useEffect, useState } from 'react';
-import { useAuth } from './AuthContext';
 import { saveCartToFirebase, getCartFromFirebase } from '../firebase/database';
 
 const CartContext = createContext();
@@ -44,6 +43,7 @@ const cartReducer = (state, action) => {
       return {
         ...state,
         items: [],
+        coupon: null,
       };
 
     case 'LOAD_CART':
@@ -52,17 +52,29 @@ const cartReducer = (state, action) => {
         items: action.payload || [],
       };
 
+    case 'APPLY_COUPON':
+      return {
+        ...state,
+        coupon: action.payload,
+      };
+
+    case 'REMOVE_COUPON':
+      return {
+        ...state,
+        coupon: null,
+      };
+
     default:
       return state;
   }
 };
 
-export const CartProvider = ({ children }) => {
+export const CartProvider = ({ children, currentUser }) => {
   const [state, dispatch] = useReducer(cartReducer, {
     items: [],
+    coupon: null,
   });
   const [isLoading, setIsLoading] = useState(false);
-  const { currentUser } = useAuth();
 
   // Load cart from localStorage on mount (for non-authenticated users)
   useEffect(() => {
@@ -407,6 +419,57 @@ export const CartProvider = ({ children }) => {
     dispatch({ type: 'CLEAR_CART' });
   };
 
+  // Coupon functions
+  const applyCoupon = (couponCode) => {
+    // Define available coupons
+    const availableCoupons = {
+      'WELCOME10': { code: 'WELCOME10', discount: 10, type: 'percentage', minAmount: 0, description: '10% off your first order' },
+      'SAVE20': { code: 'SAVE20', discount: 20, type: 'percentage', minAmount: 50, description: '20% off orders above ₹50' },
+      'FLAT50': { code: 'FLAT50', discount: 50, type: 'fixed', minAmount: 100, description: '₹50 off orders above ₹100' },
+      'FREESHIP': { code: 'FREESHIP', discount: 5.99, type: 'shipping', minAmount: 30, description: 'Free shipping on orders above ₹30' },
+      'HOLIDAY15': { code: 'HOLIDAY15', discount: 15, type: 'percentage', minAmount: 25, description: '15% off holiday special' }
+    };
+
+    const coupon = availableCoupons[couponCode.toUpperCase()];
+    if (coupon) {
+      const subtotal = getCartTotal();
+      if (subtotal >= coupon.minAmount) {
+        dispatch({ type: 'APPLY_COUPON', payload: coupon });
+        return { success: true, coupon, message: `Coupon applied! ${coupon.description}` };
+      } else {
+        return { 
+          success: false, 
+          message: `Minimum order amount of ₹${coupon.minAmount} required for this coupon` 
+        };
+      }
+    } else {
+      return { success: false, message: 'Invalid coupon code' };
+    }
+  };
+
+  const removeCoupon = () => {
+    dispatch({ type: 'REMOVE_COUPON' });
+    return { success: true, message: 'Coupon removed' };
+  };
+
+  const getCouponDiscount = () => {
+    if (!state.coupon) return 0;
+    
+    const subtotal = getCartTotal();
+    if (subtotal < state.coupon.minAmount) return 0;
+    
+    switch (state.coupon.type) {
+      case 'percentage':
+        return (subtotal * state.coupon.discount) / 100;
+      case 'fixed':
+        return Math.min(state.coupon.discount, subtotal);
+      case 'shipping':
+        return subtotal >= 50 ? 0 : state.coupon.discount; // Free shipping if order >= 50
+      default:
+        return 0;
+    }
+  };
+
   const syncCart = async () => {
     if (currentUser && state.items.length > 0) {
       try {
@@ -731,11 +794,15 @@ export const CartProvider = ({ children }) => {
 
   const value = {
     items: state.items,
+    coupon: state.coupon,
     isLoading,
     addToCart,
     removeFromCart,
     updateQuantity,
     clearCart,
+    applyCoupon,
+    removeCoupon,
+    getCouponDiscount,
     syncCart,
     isCartSynced,
     recoverCart,

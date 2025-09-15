@@ -18,21 +18,33 @@ import ProductGalleryPage from './pages/ProductGalleryPage';
 import PastryAndSweetsPage from './pages/PastryAndSweetsPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
+import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import OrderTrackingPage from './pages/OrderTrackingPage';
 import ReviewPage from './pages/ReviewPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import UserProfile from './components/UserProfile';
-import ShopDashboard from './pages/ShopDashboard';
+
 import AddProduct from './pages/AddProduct';
-import OrdersPage from './pages/OrdersPage';
-import ReviewsPage from './pages/ReviewsPage';
+
+
+import ShopOwnerHome from './pages/ShopOwnerHome';
+import ShopOrdersPage from './pages/ShopOrdersPage';
+import ShopAnalyticsPage from './pages/ShopAnalyticsPage';
+import ShopCustomersPage from './pages/ShopCustomersPage';
+import ShopSettingsPage from './pages/ShopSettingsPage';
+import CustomerOrdersPage from './pages/CustomerOrdersPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import EditProfilePage from './pages/EditProfilePage';
+import ProtectedRoute from './components/ProtectedRoute';
+
 
 function App() {
   return (
     <AuthProvider>
-      <CartProvider>
-        <Router>
+      {(authProps) => (
+        <CartProvider currentUser={authProps?.currentUser}>
+          <Router>
         <div className="flex flex-col min-h-screen">
           <Navbar />
           <main className="flex-grow">
@@ -41,17 +53,27 @@ function App() {
               <Route path="/products" element={<ProductListPage />} />
               <Route path="/gallery" element={<ProductGalleryPage />} />
               <Route path="/pastries" element={<PastryAndSweetsPage />} />
-              <Route path="/cart" element={<CartPage />} />
-              <Route path="/checkout" element={<CheckoutPage />} />
-              <Route path="/track-order" element={<OrderTrackingPage />} />
-              <Route path="/reviews" element={<ReviewPage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route path="/profile" element={<UserProfile />} />
-              <Route path="/shop-dashboard" element={<ShopDashboard />} />
-              <Route path="/add-product" element={<AddProduct />} />
-              <Route path="/orders" element={<OrdersPage />} />
-              <Route path="/my-reviews" element={<ReviewsPage />} />
+              <Route path="/cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
+              <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
+              <Route path="/order-confirmation" element={<ProtectedRoute><OrderConfirmationPage /></ProtectedRoute>} />
+              <Route path="/track-order" element={<ProtectedRoute><OrderTrackingPage /></ProtectedRoute>} />
+              <Route path="/reviews" element={<ProtectedRoute><ReviewPage /></ProtectedRoute>} />
+              <Route path="/login" element={<ProtectedRoute requireAuth={false}><LoginPage /></ProtectedRoute>} />
+              <Route path="/signup" element={<ProtectedRoute requireAuth={false}><SignupPage /></ProtectedRoute>} />
+              <Route path="/forgot-password" element={<ProtectedRoute requireAuth={false}><ForgotPasswordPage /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+              <Route path="/edit-profile" element={<ProtectedRoute><EditProfilePage /></ProtectedRoute>} />
+             
+              <Route path="/add-product" element={<ProtectedRoute userType="shop"><AddProduct /></ProtectedRoute>} />
+              <Route path="/orders" element={<ProtectedRoute userType="customer"><CustomerOrdersPage /></ProtectedRoute>} />
+             
+              <Route path="/shop-owner-home" element={<ProtectedRoute userType="shop"><ShopOwnerHome /></ProtectedRoute>} />
+              <Route path="/shop-orders" element={<ProtectedRoute userType="shop"><ShopOrdersPage /></ProtectedRoute>} />
+              <Route path="/shop-analytics" element={<ProtectedRoute userType="shop"><ShopAnalyticsPage /></ProtectedRoute>} />
+              <Route path="/shop-customers" element={<ProtectedRoute userType="shop"><ShopCustomersPage /></ProtectedRoute>} />
+              <Route path="/shop-settings" element={<ProtectedRoute userType="shop"><ShopSettingsPage /></ProtectedRoute>} />
+              <Route path="/customer-orders" element={<ProtectedRoute userType="customer"><CustomerOrdersPage /></ProtectedRoute>} />
+             
             </Routes>
           </main>
           <Footer />
@@ -68,8 +90,9 @@ function App() {
           pauseOnHover
           theme="light"
         />
-        </Router>
-      </CartProvider>
+          </Router>
+        </CartProvider>
+      )}
     </AuthProvider>
   );
 }

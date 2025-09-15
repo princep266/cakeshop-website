@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Filter, Grid, List, Loader2, AlertCircle, Star, ShoppingCart } from 'lucide-react';
 import { getProducts } from '../firebase/database';
 import ProductCard from '../components/ProductCard';
+import { products as staticProducts } from '../data/products';
 
 const ProductListPage = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -11,7 +12,7 @@ const ProductListPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch products from Firebase
+  // Fetch products from Firebase and combine with static data
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -19,14 +20,26 @@ const ProductListPage = () => {
         setError(null);
         
         const result = await getProducts();
-        if (result.success) {
-          setProducts(result.products);
-        } else {
-          setError(result.error || 'Failed to load products');
+        let allProducts = [];
+        
+        // Add static products first
+        allProducts = [...staticProducts];
+        
+        // Add Firebase products if available
+        if (result.success && result.products) {
+          // Combine static and Firebase products, avoiding duplicates by ID
+          const firebaseProducts = result.products.filter(fbProduct => 
+            !allProducts.some(staticProduct => staticProduct.id === fbProduct.id)
+          );
+          allProducts = [...allProducts, ...firebaseProducts];
         }
+        
+        setProducts(allProducts);
       } catch (err) {
         console.error('Error fetching products:', err);
-        setError('Failed to load products. Please try again later.');
+        // If Firebase fails, still show static products
+        setProducts(staticProducts);
+        setError('Some products may not be available. Showing available products.');
       } finally {
         setLoading(false);
       }
@@ -55,14 +68,33 @@ const ProductListPage = () => {
   });
 
   // Get unique categories from products
-  const categories = [
-    { id: 'all', name: 'All Products', icon: '🍰' },
-    { id: 'cakes', name: 'Cakes', icon: '🎂' },
-    { id: 'pastries', name: 'Pastries', icon: '🥐' },
-    { id: 'sweets', name: 'Sweets', icon: '🍫' },
-    { id: 'breads', name: 'Breads', icon: '🍞' },
-    { id: 'seasonal', name: 'Seasonal', icon: '🎄' }
-  ];
+  const getUniqueCategories = () => {
+    const allCategories = new Set();
+    products.forEach(product => {
+      if (product.category) {
+        allCategories.add(product.category);
+      }
+    });
+    
+    const categoryIcons = {
+      'Cakes': '🎂',
+      'Pastries': '🥐',
+      'Sweets': '🍫',
+      'Breads': '🍞',
+      'Seasonal': '🎄'
+    };
+    
+    return [
+      { id: 'all', name: 'All Products', icon: '🍰' },
+      ...Array.from(allCategories).map(category => ({
+        id: category.toLowerCase(),
+        name: category,
+        icon: categoryIcons[category] || '🍰'
+      }))
+    ];
+  };
+  
+  const categories = getUniqueCategories();
 
   if (loading) {
     return (
@@ -151,41 +183,59 @@ const ProductListPage = () => {
             <div className="flex items-center space-x-6">
               <div className="flex items-center space-x-3">
                 <span className="font-semibold text-gray-700">Sort by:</span>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
                   className="form-select"
-                >
+              >
                   <option value="name">Name</option>
-                  <option value="price-low">Price: Low to High</option>
-                  <option value="price-high">Price: High to Low</option>
+                <option value="price-low">Price: Low to High</option>
+                <option value="price-high">Price: High to Low</option>
                   <option value="rating">Rating</option>
-                </select>
+              </select>
               </div>
 
               <div className="flex items-center space-x-3">
                 <span className="font-semibold text-gray-700">View:</span>
                 <div className="flex items-center space-x-2 bg-gray-100 rounded-xl p-1">
-                  <button
-                    onClick={() => setViewMode('grid')}
+                <button
+                  onClick={() => setViewMode('grid')}
                     className={`p-3 rounded-lg transition-all duration-300 ${
-                      viewMode === 'grid'
+                    viewMode === 'grid'
                         ? 'bg-cake-red text-white shadow-medium'
                         : 'bg-transparent text-gray-600 hover:text-cake-red hover:bg-white'
-                    }`}
-                  >
+                  }`}
+                    title="Grid View"
+                >
                     <Grid className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode('list')}
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
                     className={`p-3 rounded-lg transition-all duration-300 ${
-                      viewMode === 'list'
+                    viewMode === 'list'
                         ? 'bg-cake-red text-white shadow-medium'
                         : 'bg-transparent text-gray-600 hover:text-cake-red hover:bg-white'
                     }`}
+                    title="List View"
                   >
                     <List className="w-5 h-5" />
                   </button>
+                  <button
+                    onClick={() => setViewMode('masonry')}
+                    className={`p-3 rounded-lg transition-all duration-300 ${
+                      viewMode === 'masonry'
+                        ? 'bg-cake-red text-white shadow-medium'
+                        : 'bg-transparent text-gray-600 hover:text-cake-red hover:bg-white'
+                    }`}
+                    title="Masonry View"
+                  >
+                    <div className="w-5 h-5 flex flex-col space-y-0.5">
+                      <div className="w-2 h-2 bg-current rounded-sm"></div>
+                      <div className="w-3 h-2 bg-current rounded-sm"></div>
+                      <div className="w-1 h-2 bg-current rounded-sm"></div>
+                    </div>
+                </button>
+
                 </div>
               </div>
             </div>
@@ -195,9 +245,12 @@ const ProductListPage = () => {
         {/* Products Grid */}
         <div className="mb-12">
           <div className="flex items-center justify-between mb-8">
-            <div className="body-text text-gray-600">
-              Showing <span className="font-semibold text-cake-red">{sortedProducts.length}</span> of <span className="font-semibold">{products.length}</span> products
-            </div>
+                      <div className="body-text text-gray-600">
+            Showing <span className="font-semibold text-cake-red">{sortedProducts.length}</span> of <span className="font-semibold">{products.length}</span> products
+            <span className="text-xs text-gray-400 ml-2">
+              (Static + Firebase data)
+            </span>
+          </div>
             {selectedCategory !== 'All' && (
               <button
                 onClick={() => setSelectedCategory('All')}
@@ -209,11 +262,138 @@ const ProductListPage = () => {
           </div>
           
           {viewMode === 'grid' ? (
-            <div className="responsive-grid-4 gap-8">
+            <>
+              {/* Grid View Options */}
+              <div className="flex items-center justify-between mb-8 p-4 bg-gray-50 rounded-xl">
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm font-medium text-gray-700">Grid Size:</span>
+                  <div className="flex items-center space-x-2 bg-white rounded-lg p-1 shadow-sm">
+                    <button
+                      onClick={() => setViewMode('grid-compact')}
+                      className={`p-2 rounded-md transition-all duration-300 ${
+                        viewMode === 'grid-compact'
+                          ? 'bg-cake-red text-white shadow-medium'
+                          : 'bg-transparent text-gray-600 hover:text-cake-red hover:bg-gray-100'
+                      }`}
+                      title="Compact Grid"
+                    >
+                      <Grid className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setViewMode('grid')}
+                      className={`p-2 rounded-md transition-all duration-300 ${
+                        viewMode === 'grid'
+                          ? 'bg-cake-red text-white shadow-medium'
+                          : 'bg-transparent text-gray-600 hover:text-cake-red hover:bg-gray-100'
+                      }`}
+                      title="Standard Grid"
+                    >
+                      <Grid className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setViewMode('grid-large')}
+                      className={`p-2 rounded-md transition-all duration-300 ${
+                        viewMode === 'grid-large'
+                          ? 'bg-cake-red text-white shadow-medium'
+                          : 'bg-transparent text-gray-600 hover:text-cake-red hover:bg-gray-100'
+                      }`}
+                      title="Large Grid"
+                    >
+                      <Grid className="w-6 h-6" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Grid Layout Options */}
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm font-medium text-gray-700">Layout:</span>
+                  <div className="flex items-center space-x-2 bg-white rounded-lg p-1 shadow-sm">
+                    <button
+                      onClick={() => setViewMode('grid-auto-fit')}
+                      className={`px-3 py-2 rounded-md text-xs font-medium transition-all duration-300 ${
+                        viewMode === 'grid-auto-fit'
+                          ? 'bg-cake-red text-white shadow-medium'
+                          : 'bg-transparent text-gray-600 hover:text-cake-red hover:bg-gray-100'
+                      }`}
+                      title="Auto-fit Grid"
+                    >
+                      Auto-fit
+                    </button>
+                    <button
+                      onClick={() => setViewMode('grid-auto-fill')}
+                      className={`px-3 py-2 rounded-md text-xs font-medium transition-all duration-300 ${
+                        viewMode === 'grid-auto-fill'
+                          ? 'bg-cake-red text-white shadow-medium'
+                          : 'bg-transparent text-gray-600 hover:text-cake-red hover:bg-gray-100'
+                      }`}
+                      title="Auto-fill Grid"
+                    >
+                      Auto-fill
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="text-sm text-gray-500">
+                  {viewMode === 'grid-compact' && 'Compact View'}
+                  {viewMode === 'grid' && 'Standard View'}
+                  {viewMode === 'grid-large' && 'Large View'}
+                  {viewMode === 'grid-auto-fit' && 'Auto-fit View'}
+                  {viewMode === 'grid-auto-fill' && 'Auto-fill View'}
+                  {viewMode === 'masonry' && 'Masonry View'}
+                </div>
+              </div>
+
+              {/* Dynamic Grid Layouts */}
+              {viewMode === 'grid-compact' && (
+                <div className="product-grid-compact">
+                  {sortedProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} compact={true} />
+                  ))}
+                </div>
+              )}
+              
+              {viewMode === 'grid' && (
+                <div className="product-grid-lg">
+                  {sortedProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              )}
+              
+              {viewMode === 'grid-large' && (
+                <div className="product-grid-md">
+                  {sortedProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} large={true} />
+                  ))}
+                </div>
+              )}
+
+              {/* Auto-fit and Auto-fill Grid Views */}
+              {viewMode === 'grid-auto-fit' && (
+                <div className="grid-auto-fit">
+                  {sortedProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              )}
+
+              {viewMode === 'grid-auto-fill' && (
+                <div className="grid-auto-fill">
+                  {sortedProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              )}
+
+              {/* Masonry View */}
+              {viewMode === 'masonry' && (
+                <div className="product-grid-masonry">
               {sortedProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
+              )}
+            </>
           ) : (
             <div className="space-y-6">
               {sortedProducts.map((product) => (
@@ -229,13 +409,13 @@ const ProductListPage = () => {
                           {product.category}
                         </span>
                       </div>
-                      <img
-                        src={product.image}
-                        alt={product.name}
+                    <img
+                      src={product.image}
+                      alt={product.name}
                         className="w-full h-64 md:h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
+                    />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent group-hover:opacity-100 transition-opacity duration-300" />
-                    </div>
+                  </div>
                     
                     {/* Content Section */}
                     <div className="md:w-2/3 p-8 flex flex-col justify-between min-w-0">
@@ -244,11 +424,11 @@ const ProductListPage = () => {
                         <div className="flex justify-between items-start mb-6">
                           <div className="flex-1 min-w-0">
                             <h3 className="heading-3 mb-4 group-hover:text-cake-red transition-colors line-clamp-2">
-                              {product.name}
-                            </h3>
+                          {product.name}
+                        </h3>
                             <p className="body-text text-gray-600 mb-6 line-clamp-3 leading-relaxed group-hover:text-gray-700 transition-colors duration-300">
-                              {product.description}
-                            </p>
+                          {product.description}
+                        </p>
                             
                             {/* Rating */}
                             <div className="flex items-center space-x-3 mb-6">
@@ -263,17 +443,17 @@ const ProductListPage = () => {
                                     }`} 
                                   />
                                 ))}
-                              </div>
+                      </div>
                               <span className="body-text-small text-gray-500 group-hover:text-gray-600 transition-colors duration-300">
                                 ({product.reviews || 12} reviews)
                               </span>
-                            </div>
-                          </div>
                         </div>
+                      </div>
+                    </div>
                         
                         {/* Price */}
                         <div className="text-3xl font-bold text-cake-red mb-6 group-hover:scale-110 transition-transform duration-300">
-                          ${product.price}
+                          ₹{product.price}
                         </div>
                       </div>
                       
@@ -282,9 +462,9 @@ const ProductListPage = () => {
                         <button className="w-full gradient-primary hover:shadow-strong text-white font-semibold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-medium flex items-center justify-center space-x-3">
                           <ShoppingCart className="w-5 h-5" />
                           <span>Add to Cart</span>
-                        </button>
-                      </div>
+                      </button>
                     </div>
+                  </div>
                   </div>
 
                   {/* Hover Border Effect */}
@@ -319,3 +499,4 @@ const ProductListPage = () => {
 };
 
 export default ProductListPage;
+

@@ -9,7 +9,7 @@ export const products = [
     description: "Rich chocolate cake with fudge frosting and chocolate shavings",
     rating: 4.8,
     reviews: 124,
-    inStock: true,
+    inStock: false,
     shopId: "shop-1"
   },
   {
@@ -21,7 +21,7 @@ export const products = [
     description: "Light vanilla sponge with fresh cream and berries",
     rating: 4.6,
     reviews: 89,
-    inStock: true,
+    inStock: false,
     shopId: "shop-1"
   },
   {
@@ -33,7 +33,7 @@ export const products = [
     description: "Classic red velvet with cream cheese frosting",
     rating: 4.9,
     reviews: 156,
-    inStock: true,
+    inStock: false,
     shopId: "shop-1"
   },
   {
@@ -45,7 +45,7 @@ export const products = [
     description: "Moist carrot cake with walnuts and cream cheese frosting",
     rating: 4.7,
     reviews: 67,
-    inStock: true,
+    inStock: false,
     shopId: "shop-1"
   },
   
@@ -54,24 +54,24 @@ export const products = [
     id: 5,
     name: "Croissant",
     category: "Pastries",
-    price: 3.99,
-    image: "https://images.unsplash.com/photo-1555507036-ab1f40388010?w=400&h=300&fit=crop",
+    price: 500,
+    image: "https://delishglobe.com/wp-content/uploads/2024/11/Croissants-article.png",
     description: "Buttery, flaky French croissant",
     rating: 4.5,
     reviews: 234,
-    inStock: true,
+    inStock: false,
     shopId: "shop-1"
   },
   {
     id: 6,
     name: "Danish Pastry",
     category: "Pastries",
-    price: 4.99,
+    price: 300,
     image: "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=400&h=300&fit=crop",
     description: "Sweet pastry with fruit filling",
     rating: 4.4,
     reviews: 112,
-    inStock: true,
+    inStock: false,
     shopId: "shop-1"
   },
   {
@@ -83,7 +83,7 @@ export const products = [
     description: "Chocolate éclair with cream filling",
     rating: 4.6,
     reviews: 89,
-    inStock: true,
+    inStock: false,
     shopId: "shop-1"
   },
   {
@@ -91,11 +91,11 @@ export const products = [
     name: "Pain au Chocolat",
     category: "Pastries",
     price: 4.49,
-    image: "https://images.unsplash.com/photo-1555507036-ab1f40388010?w=400&h=300&fit=crop",
+    image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQi7SsvcVnPAlfNcts4IuahspLFm6alq-cL2A&s",
     description: "Chocolate-filled French pastry",
     rating: 4.7,
     reviews: 145,
-    inStock: true,
+    inStock: false,
     shopId: "shop-1"
   },
   
@@ -105,11 +105,11 @@ export const products = [
     name: "Chocolate Truffles",
     category: "Sweets",
     price: 12.99,
-    image: "https://images.unsplash.com/photo-1549007994-cb92aebf54cb?w=400&h=300&fit=crop",
+    image: "https://www.eatloveeats.com/wp-content/uploads/2022/02/Raspberry-Dark-Chocolate-Truffles-Featured.jpg",
     description: "Assorted chocolate truffles in gift box",
     rating: 4.8,
     reviews: 203,
-    inStock: true,
+    inStock: false,
     shopId: "shop-1"
   },
   {
@@ -121,7 +121,7 @@ export const products = [
     description: "Colorful French macarons in assorted flavors",
     rating: 4.9,
     reviews: 178,
-    inStock: true,
+    inStock: false,
     shopId: "shop-1"
   },
   {
@@ -133,7 +133,7 @@ export const products = [
     description: "Assorted cupcakes with decorative frosting",
     rating: 4.6,
     reviews: 156,
-    inStock: true,
+    inStock: false,
     shopId: "shop-1"
   },
   {
@@ -145,7 +145,7 @@ export const products = [
     description: "Fudgy chocolate brownies with walnuts",
     rating: 4.7,
     reviews: 134,
-    inStock: true,
+    inStock: false,
     shopId: "shop-1"
   }
 ];

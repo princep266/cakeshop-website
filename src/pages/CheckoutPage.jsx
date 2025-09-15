@@ -18,14 +18,19 @@ import {
   Calendar,
   Clock,
   Shield,
-  Star
+  Star,
+  Tag,
+  X
 } from 'lucide-react';
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { currentUser, userData } = useAuth();
-  const { items, getCartTotal, clearCart } = useCart();
+  const { items, getCartTotal, clearCart, coupon, applyCoupon, removeCoupon, getCouponDiscount } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponMessage, setCouponMessage] = useState('');
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
 
   const [formData, setFormData] = useState({
     firstName: userData?.firstName || '',
@@ -43,9 +48,10 @@ const CheckoutPage = () => {
   });
 
   const subtotal = getCartTotal();
+  const couponDiscount = getCouponDiscount();
   const shipping = subtotal > 50 ? 0 : 5.99;
   const tax = subtotal * 0.08;
-  const total = subtotal + shipping + tax;
+  const total = subtotal - couponDiscount + shipping + tax;
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -53,6 +59,40 @@ const CheckoutPage = () => {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleApplyCoupon = async (e) => {
+    e.preventDefault();
+    if (!couponCode.trim()) {
+      setCouponMessage('Please enter a coupon code');
+      return;
+    }
+
+    setIsApplyingCoupon(true);
+    setCouponMessage('');
+
+    try {
+      const result = applyCoupon(couponCode.trim());
+      if (result.success) {
+        setCouponMessage(result.message);
+        setCouponCode('');
+        toast.success(result.message);
+      } else {
+        setCouponMessage(result.message);
+        toast.error(result.message);
+      }
+    } catch (error) {
+      setCouponMessage('Error applying coupon. Please try again.');
+      toast.error('Error applying coupon. Please try again.');
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    const result = removeCoupon();
+    setCouponMessage('');
+    toast.success(result.message);
   };
 
   const handleSubmit = async (e) => {
@@ -73,10 +113,25 @@ const CheckoutPage = () => {
     setIsProcessing(true);
 
     try {
+      // Get shopId from the first product (assuming all products are from the same shop)
+      const shopId = items[0]?.shopId || 'shop-1';
+      
+      console.log('Current user:', currentUser);
+      console.log('Cart items:', items);
+      console.log('Shop ID from first item:', shopId);
+      
       const orderData = {
         userId: currentUser.uid,
         userEmail: currentUser.email,
-        items: items,
+        items: items.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image,
+          shopId: item.shopId
+        })),
+        shopId: shopId,
         shippingAddress: {
           firstName: formData.firstName,
           lastName: formData.lastName,
@@ -95,32 +150,46 @@ const CheckoutPage = () => {
         },
         orderSummary: {
           subtotal: subtotal,
+          couponDiscount: couponDiscount,
+          couponCode: coupon?.code || null,
           shipping: shipping,
           tax: tax,
           total: total
-        },
-        status: 'pending',
-        orderDate: new Date().toISOString(),
-        estimatedDelivery: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
+        }
       };
 
-      const result = await saveOrder(orderData);
+      console.log('Submitting order with data:', orderData);
+
+      // Add timestamp for debugging
+      console.log('Order submission started at:', new Date().toISOString());
       
-      if (result.success) {
-        toast.success('Order placed successfully!');
-        clearCart();
-        navigate('/order-confirmation', { 
-          state: { 
-            orderId: result.orderId,
-            orderData: orderData
-          } 
-        });
-      } else {
-        toast.error(result.message || 'Failed to place order. Please try again.');
+      try {
+        // Persist using separated collections writer. Do NOT embed address/payment in orders.
+        const result = await saveOrder(orderData);
+        console.log('Save order result:', result);
+        
+        if (result.success) {
+          console.log('Order saved successfully with ID:', result.orderId);
+          toast.success('Order placed successfully!');
+          clearCart();
+          navigate('/order-confirmation', { 
+            state: { 
+              orderId: result.orderId,
+              orderData: orderData
+            } 
+          });
+        } else {
+          console.error('Order failed with error:', result.error);
+          toast.error(result.error || 'Order could not be placed. Please try again.');
+          return;
+        }
+      } catch (saveOrderError) {
+        console.error('Exception during saveOrder:', saveOrderError);
+        toast.error(`Order failed: ${saveOrderError.message || 'An unexpected error occurred'}`);
       }
     } catch (error) {
       console.error('Error placing order:', error);
-      toast.error('An error occurred while placing your order. Please try again.');
+      toast.error(`Order failed: ${error.message || 'An error occurred while placing your order. Please try again.'}`);
     } finally {
       setIsProcessing(false);
     }
@@ -196,9 +265,9 @@ const CheckoutPage = () => {
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit} className="space-y-12">
               {/* Personal Information */}
-              <div className="card p-8">
+              <div className="card p-8 ">
                 <div className="flex items-center space-x-4 mb-8">
-                  <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center shadow-medium">
+                  <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center shadow-medium bg-black">
                     <User className="w-6 h-6 text-white" />
                   </div>
                   <div>
@@ -339,10 +408,89 @@ const CheckoutPage = () => {
                 </div>
               </div>
 
+              {/* Coupon Section */}
+              <div className="card p-8">
+                <div className="flex items-center space-x-4 mb-8">
+                  <div className="w-12 h-12 bg-gradient-secondary rounded-full flex items-center justify-center shadow-medium">
+                    <Tag className="w-6 h-6 text-cake-brown" />
+                  </div>
+                  <div>
+                    <h2 className="heading-3">Apply Coupon</h2>
+                    <p className="text-gray-600">Save money with discount codes</p>
+                  </div>
+                </div>
+                
+                {coupon ? (
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-xl mb-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                          <CheckCircle className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-green-800">Coupon Applied!</p>
+                          <p className="text-sm text-green-600">{coupon.code} - {coupon.description}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleRemoveCoupon}
+                        className="text-red-600 hover:text-red-800 transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex space-x-4">
+                      <input
+                        type="text"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value)}
+                        placeholder="Enter coupon code"
+                        className="form-input flex-1"
+                        disabled={isApplyingCoupon}
+                      />
+                      <button
+                        onClick={handleApplyCoupon}
+                        disabled={isApplyingCoupon || !couponCode.trim()}
+                        className="btn-secondary px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isApplyingCoupon ? (
+                          <div className="flex items-center space-x-2">
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <span>Applying...</span>
+                          </div>
+                        ) : (
+                          'Apply'
+                        )}
+                      </button>
+                    </div>
+                    
+                    {couponMessage && (
+                      <p className={`text-sm ${couponMessage.includes('applied') ? 'text-green-600' : 'text-red-600'}`}>
+                        {couponMessage}
+                      </p>
+                    )}
+                    
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                      <h4 className="font-semibold text-blue-800 mb-2">Available Coupons:</h4>
+                      <div className="space-y-2 text-sm text-blue-700">
+                        <p><strong>WELCOME10:</strong> 10% off your first order</p>
+                        <p><strong>SAVE20:</strong> 20% off orders above ₹50</p>
+                        <p><strong>FLAT50:</strong> ₹50 off orders above ₹100</p>
+                        <p><strong>FREESHIP:</strong> Free shipping on orders above ₹30</p>
+                        <p><strong>HOLIDAY15:</strong> 15% off holiday special</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Payment Information */}
               <div className="card p-8">
                 <div className="flex items-center space-x-4 mb-8">
-                  <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center shadow-medium">
+                  <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center shadow-medium bg-black">
                     <CreditCard className="w-6 h-6 text-white" />
                   </div>
                   <div>
@@ -475,7 +623,7 @@ const CheckoutPage = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-cake-red">${(item.price * item.quantity).toFixed(2)}</div>
+                        <div className="font-bold text-cake-red">₹{(item.price * item.quantity).toFixed(2)}</div>
                       </div>
                     </div>
                   ))}
@@ -485,8 +633,18 @@ const CheckoutPage = () => {
                 <div className="space-y-4 mb-8">
                   <div className="flex justify-between items-center py-3 border-b border-gray-100">
                     <span className="text-gray-600 font-semibold">Subtotal</span>
-                    <span className="font-bold text-xl">${subtotal.toFixed(2)}</span>
+                    <span className="font-bold text-xl">₹{subtotal.toFixed(2)}</span>
                   </div>
+                  
+                  {couponDiscount > 0 && (
+                    <div className="flex justify-between items-center py-3 border-b border-gray-100">
+                      <div className="flex items-center space-x-3">
+                        <Tag className="w-5 h-5 text-green-500 flex-shrink-0" />
+                        <span className="text-green-600 font-semibold">Discount ({coupon?.code})</span>
+                      </div>
+                      <span className="font-bold text-green-600">-₹{couponDiscount.toFixed(2)}</span>
+                    </div>
+                  )}
                   
                   <div className="flex justify-between items-center py-3 border-b border-gray-100">
                     <div className="flex items-center space-x-3">
@@ -494,20 +652,20 @@ const CheckoutPage = () => {
                       <span className="text-gray-600 font-semibold">Shipping</span>
                     </div>
                     <span className={`font-bold ${shipping === 0 ? 'text-green-600' : ''}`}>
-                      {shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}
+                      {shipping === 0 ? 'FREE' : `₹${shipping.toFixed(2)}`}
                     </span>
                   </div>
                   
                   <div className="flex justify-between items-center py-3 border-b border-gray-100">
                     <span className="text-gray-600 font-semibold">Tax</span>
-                    <span className="font-bold">${tax.toFixed(2)}</span>
+                    <span className="font-bold">₹{tax.toFixed(2)}</span>
                   </div>
                   
                   <div className="pt-4">
                     <div className="flex justify-between items-center">
                       <span className="text-2xl font-bold text-gray-800">Total</span>
                       <span className="text-3xl font-bold text-cake-red">
-                        ${total.toFixed(2)}
+                        ₹{total.toFixed(2)}
                       </span>
                     </div>
                   </div>

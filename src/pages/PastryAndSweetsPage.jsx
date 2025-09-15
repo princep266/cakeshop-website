@@ -151,7 +151,7 @@ const PastryAndSweetsPage = () => {
               <div className="bg-white rounded-lg p-4">
                 <div className="text-2xl mb-2">📦</div>
                 <h3 className="font-semibold text-gray-800">Bulk Orders</h3>
-                <p className="text-gray-600">Discount on orders over $50</p>
+                <p className="text-gray-600">Discount on orders over ₹50</p>
               </div>
               <div className="bg-white rounded-lg p-4">
                 <div className="text-2xl mb-2">🎉</div>
