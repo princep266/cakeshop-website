@@ -1,60 +1,111 @@
 import React, { useState } from 'react';
 import { Search, Package, Truck, CheckCircle, Clock, MapPin, AlertCircle } from 'lucide-react';
-import { getOrderByTrackingId, getOrderById, getDeliveryTracking } from '../firebase/database';
+import { getOrderByTrackingId, getOrderById, getDeliveryTracking, getOrdersByUser } from '../firebase/database';
 import { toast } from 'react-toastify';
 
 const OrderTrackingPage = () => {
   const [orderId, setOrderId] = useState('');
+  const [email, setEmail] = useState('');
   const [trackingData, setTrackingData] = useState(null);
   const [deliveryTracking, setDeliveryTracking] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchMethod, setSearchMethod] = useState('tracking'); // 'tracking' or 'email'
 
   const handleTrackOrder = async (e) => {
     e.preventDefault();
     
-    if (!orderId.trim()) {
-      toast.error('Please enter an order ID or tracking ID');
-      return;
+    if (searchMethod === 'tracking') {
+      if (!orderId.trim()) {
+        toast.error('Please enter an order ID or tracking ID');
+        return;
+      }
+    } else {
+      if (!email.trim()) {
+        toast.error('Please enter your email address');
+        return;
+      }
     }
 
     setIsLoading(true);
+    setTrackingData(null);
+    setDeliveryTracking(null);
     
     try {
-      // Try to find order by tracking ID first
-      const orderResult = await getOrderByTrackingId(orderId.trim());
-      
-      if (orderResult.success) {
-        setTrackingData(orderResult.order);
+      if (searchMethod === 'tracking') {
+        console.log('Tracking order with ID:', orderId.trim());
         
-        // Get delivery tracking information
-        const deliveryResult = await getDeliveryTracking(orderResult.order.id);
-        if (deliveryResult.success) {
-          setDeliveryTracking(deliveryResult.tracking);
-        }
+        // Try to find order by tracking ID first
+        const orderResult = await getOrderByTrackingId(orderId.trim());
+        console.log('Tracking ID search result:', orderResult);
         
-        toast.success('Order found!');
-      } else {
-        // If not found by tracking ID, try by order ID
-        const orderByIdResult = await getOrderById(orderId.trim());
-        if (orderByIdResult.success) {
-          setTrackingData(orderByIdResult.order);
+        if (orderResult.success) {
+          setTrackingData(orderResult.order);
           
           // Get delivery tracking information
-          const deliveryResult = await getDeliveryTracking(orderByIdResult.order.id);
-          if (deliveryResult.success) {
-            setDeliveryTracking(deliveryResult.tracking);
+          try {
+            const deliveryResult = await getDeliveryTracking(orderResult.order.id);
+            console.log('Delivery tracking result:', deliveryResult);
+            if (deliveryResult.success) {
+              setDeliveryTracking(deliveryResult.tracking);
+            }
+          } catch (deliveryError) {
+            console.warn('Failed to load delivery tracking:', deliveryError);
           }
           
           toast.success('Order found!');
         } else {
-          toast.error('Order not found. Please check your tracking ID or order ID.');
-          setTrackingData(null);
-          setDeliveryTracking(null);
+          // If not found by tracking ID, try by order ID
+          console.log('Order not found by tracking ID, trying order ID...');
+          const orderByIdResult = await getOrderById(orderId.trim());
+          console.log('Order ID search result:', orderByIdResult);
+          
+          if (orderByIdResult.success) {
+            setTrackingData(orderByIdResult.order);
+            
+            // Get delivery tracking information
+            try {
+              const deliveryResult = await getDeliveryTracking(orderByIdResult.order.id);
+              if (deliveryResult.success) {
+                setDeliveryTracking(deliveryResult.tracking);
+              }
+            } catch (deliveryError) {
+              console.warn('Failed to load delivery tracking:', deliveryError);
+            }
+            
+            toast.success('Order found!');
+          } else {
+            toast.error('Order not found. Please check your tracking ID or order ID.');
+          }
+        }
+      } else {
+        // Search by email
+        console.log('Searching orders by email:', email.trim());
+        const ordersResult = await getOrdersByUser(email.trim());
+        console.log('Email search result:', ordersResult);
+        
+        if (ordersResult.success && ordersResult.orders.length > 0) {
+          // Show the most recent order
+          const mostRecentOrder = ordersResult.orders[0];
+          setTrackingData(mostRecentOrder);
+          
+          // Get delivery tracking information
+          try {
+            const deliveryResult = await getDeliveryTracking(mostRecentOrder.id);
+            if (deliveryResult.success) {
+              setDeliveryTracking(deliveryResult.tracking);
+            }
+          } catch (deliveryError) {
+            console.warn('Failed to load delivery tracking:', deliveryError);
+          }
+          
+          toast.success(`Found ${ordersResult.orders.length} order(s)! Showing most recent.`);
+        } else {
+          toast.error('No orders found for this email address.');
         }
       }
     } catch (error) {
       console.error('Error tracking order:', error);
-      toast.error('Error tracking order. Please try again.');
+      toast.error(`Error tracking order: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -114,20 +165,77 @@ const OrderTrackingPage = () => {
           </p>
         </div>
 
+        {/* Search Method Toggle */}
+        <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+          <div className="flex justify-center space-x-4">
+            <button
+              type="button"
+              onClick={() => {
+                setSearchMethod('tracking');
+                setOrderId('');
+                setEmail('');
+                setTrackingData(null);
+                setDeliveryTracking(null);
+              }}
+              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
+                searchMethod === 'tracking'
+                  ? 'bg-cake-red text-white shadow-lg'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Track by ID
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchMethod('email');
+                setOrderId('');
+                setEmail('');
+                setTrackingData(null);
+                setDeliveryTracking(null);
+              }}
+              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
+                searchMethod === 'email'
+                  ? 'bg-cake-red text-white shadow-lg'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Track by Email
+            </button>
+          </div>
+        </div>
+
         {/* Search Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
           <form onSubmit={handleTrackOrder} className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tracking ID or Order ID
-              </label>
-              <input
-                type="text"
-                value={orderId}
-                onChange={(e) => setOrderId(e.target.value)}
-                placeholder="Enter your tracking ID (e.g., TRK-ABC123) or order ID"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-cake-red focus:border-transparent transition-all duration-300"
-              />
+              {searchMethod === 'tracking' ? (
+                <>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tracking ID or Order ID
+                  </label>
+                  <input
+                    type="text"
+                    value={orderId}
+                    onChange={(e) => setOrderId(e.target.value)}
+                    placeholder="Enter your tracking ID (e.g., TRK-ABC123) or order ID"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-cake-red focus:border-transparent transition-all duration-300"
+                  />
+                </>
+              ) : (
+                <>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email address"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-cake-red focus:border-transparent transition-all duration-300"
+                  />
+                </>
+              )}
             </div>
             <div className="flex items-end">
               <button
@@ -249,6 +357,33 @@ const OrderTrackingPage = () => {
               </div>
             )}
 
+            {/* Order Items */}
+            {trackingData.items && trackingData.items.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-xl p-8">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                  Order Items
+                </h2>
+                <div className="space-y-4">
+                  {trackingData.items.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                      <div className="flex items-center space-x-4">
+                        <Package className="w-8 h-8 text-cake-red" />
+                        <div>
+                          <div className="font-semibold text-gray-800">{item.name || item.productName || 'Product'}</div>
+                          <div className="text-sm text-gray-600">
+                            Quantity: {item.quantity || 1} × ${(item.price || item.unitPrice || 0).toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="font-semibold text-gray-800">
+                        ${((item.price || item.unitPrice || 0) * (item.quantity || 1)).toFixed(2)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Order Details */}
             <div className="bg-white rounded-2xl shadow-xl p-8">
               <h2 className="text-2xl font-bold text-gray-800 mb-6">
@@ -261,13 +396,22 @@ const OrderTrackingPage = () => {
                 </div>
                 <div>
                   <div className="text-sm text-gray-500 mb-1">Total Amount</div>
-                  <div className="font-semibold text-gray-800">${trackingData.total?.toFixed(2)}</div>
+                  <div className="font-semibold text-gray-800">${trackingData.total?.toFixed(2) || trackingData.orderSummary?.total?.toFixed(2) || '0.00'}</div>
                 </div>
                 {trackingData.shopNotes && (
                   <div className="md:col-span-2">
                     <div className="text-sm text-gray-500 mb-1">Shop Notes</div>
                     <div className="font-semibold text-gray-800 bg-yellow-50 p-3 rounded-lg">
                       {trackingData.shopNotes}
+                    </div>
+                  </div>
+                )}
+                {trackingData.shippingAddress && (
+                  <div className="md:col-span-2">
+                    <div className="text-sm text-gray-500 mb-1">Delivery Address</div>
+                    <div className="font-semibold text-gray-800 bg-blue-50 p-3 rounded-lg">
+                      {trackingData.shippingAddress.address || 
+                       `${trackingData.shippingAddress.streetAddress || ''} ${trackingData.shippingAddress.city || ''} ${trackingData.shippingAddress.state || ''} ${trackingData.shippingAddress.zipCode || ''}`}
                     </div>
                   </div>
                 )}
@@ -286,11 +430,11 @@ const OrderTrackingPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
                 <div className="bg-white rounded-xl p-4">
                   <div className="font-semibold text-gray-800 mb-1">Phone</div>
-                  <div className="text-gray-600">+1 (555) 123-4567</div>
+                  <div className="text-gray-600">+91 7208327881 </div>
                 </div>
                 <div className="bg-white rounded-xl p-4">
                   <div className="font-semibold text-gray-800 mb-1">Email</div>
-                  <div className="text-gray-600">support@noisycakeshop.com</div>
+                  <div className="text-gray-600">princeprajapati8392@gmail.com</div>
                 </div>
               </div>
             </div>
@@ -304,15 +448,25 @@ const OrderTrackingPage = () => {
               <div className="text-2xl mb-2">💡</div>
               <h3 className="font-semibold text-blue-800 mb-2">How to Track Your Order</h3>
               <p className="text-blue-700 mb-4">
-                Enter your tracking ID (format: TRK-XXXXX) or order ID to see real-time tracking information.
+                Choose your preferred method to track your order and get real-time updates.
               </p>
-              <div className="bg-white rounded-xl p-4 text-left">
-                <h4 className="font-semibold text-gray-800 mb-2">Example Tracking IDs:</h4>
-                <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• TRK-ABC123XYZ</li>
-                  <li>• TRK-DEF456UVW</li>
-                  <li>• Your order ID from order confirmation</li>
-                </ul>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white rounded-xl p-4 text-left">
+                  <h4 className="font-semibold text-gray-800 mb-2">Track by ID:</h4>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li>• TRK-ABC123XYZ</li>
+                    <li>• TRK-DEF456UVW</li>
+                    <li>• Your order ID from confirmation</li>
+                  </ul>
+                </div>
+                <div className="bg-white rounded-xl p-4 text-left">
+                  <h4 className="font-semibold text-gray-800 mb-2">Track by Email:</h4>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li>• Enter your email address</li>
+                    <li>• View your recent orders</li>
+                    <li>• Track multiple orders</li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>

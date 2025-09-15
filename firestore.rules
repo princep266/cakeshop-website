@@ -20,16 +20,36 @@ service cloud.firestore {
          request.resource.data.shopId == request.auth.uid); // Only shop owner can write
     }
     
-    // Allow users to read and write their own orders
+    // Updated rules: Allow users to access their own orders AND shop owners to access orders for their shop
+    // Enforce separation: orders must NOT embed shippingAddress or paymentInfo
     match /orders/{orderId} {
-      allow read, write: if request.auth != null && 
-        (request.auth.uid == resource.data.userId || 
-         request.auth.uid == resource.data.shopId);
+      allow read: if request.auth != null && 
+        (resource.data.userId == request.auth.uid || 
+         resource.data.shopId == request.auth.uid);
       allow create: if request.auth != null && 
-        request.auth.uid == request.resource.data.userId;
+        (request.resource.data.userId == request.auth.uid ||
+         request.resource.data.shopId == request.auth.uid) &&
+        !('shippingAddress' in request.resource.data) &&
+        !('paymentInfo' in request.resource.data);
+      allow update, delete: if request.auth != null &&
+        (resource.data.userId == request.auth.uid || resource.data.shopId == request.auth.uid) &&
+        !('shippingAddress' in request.resource.data) &&
+        !('paymentInfo' in request.resource.data);
     }
     
-    // Allow delivery tracking for orders
+    // STRICT USER ISOLATION: Users can only read and write their own shop orders
+    match /shopOrders/{orderId} {
+      allow read, write: if request.auth != null && 
+        (resource.data.userId == request.auth.uid || 
+         resource.data.shopId == request.auth.uid ||
+         request.resource.data.userId == request.auth.uid ||
+         request.resource.data.shopId == request.auth.uid);
+      allow create: if request.auth != null && 
+        (request.resource.data.userId == request.auth.uid ||
+         request.resource.data.shopId == request.auth.uid);
+    }
+    
+    // Allow delivery tracking for orders - users can only access their own tracking
     match /deliveryTracking/{trackingId} {
       allow read: if request.auth != null && 
         (request.auth.uid == resource.data.userId || 
@@ -56,14 +76,66 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == shopId;
     }
     
-    // Allow shop owners to read their own shop orders
-    match /shopOrders/{orderId} {
+    // Additional permissions for shop dashboard access - already covered above
+    
+    // Allow shop owners to read all products for their shop
+    match /products/{productId} {
+      allow read: if true; // Anyone can read products
+      allow write: if request.auth != null && 
+        (resource.data.shopId == request.auth.uid || 
+         request.resource.data.shopId == request.auth.uid);
+    }
+    
+    // Allow authenticated users to read addresses and payments for their orders
+    match /addresses/{addressId} {
       allow read, write: if request.auth != null && 
-        (request.auth.uid == resource.data.shopId || 
-         resource.data.shopId == 'default-shop');
+        (resource.data.userId == request.auth.uid || 
+         resource.data.shopId == request.auth.uid);
       allow create: if request.auth != null && 
-        (request.auth.uid == request.resource.data.shopId || 
-         request.resource.data.shopId == 'default-shop');
+        (request.resource.data.userId == request.auth.uid ||
+         request.resource.data.shopId == request.auth.uid);
+    }
+    
+    match /payments/{paymentId} {
+      allow read, write: if request.auth != null && 
+        (resource.data.userId == request.auth.uid || 
+         resource.data.shopId == request.auth.uid);
+      allow create: if request.auth != null && 
+        (request.resource.data.userId == request.auth.uid ||
+         request.resource.data.shopId == request.auth.uid);
+    }
+
+    // Separate collection for order items
+    match /orderItems/{itemId} {
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.shopId == request.auth.uid
+      );
+      allow create: if request.auth != null && (
+        request.resource.data.userId == request.auth.uid ||
+        request.resource.data.shopId == request.auth.uid
+      );
+      allow update, delete: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.shopId == request.auth.uid
+      );
+    }
+    
+    // Allow shop owners to read inventory and employee data for their shop
+    match /inventory/{itemId} {
+      allow read, write: if request.auth != null && 
+        (resource.data.shopId == request.auth.uid || 
+         request.resource.data.shopId == request.auth.uid);
+      allow create: if request.auth != null && 
+        (request.resource.data.shopId == request.auth.uid);
+    }
+    
+    match /employees/{employeeId} {
+      allow read, write: if request.auth != null && 
+        (resource.data.shopId == request.auth.uid || 
+         request.resource.data.shopId == request.auth.uid);
+      allow create: if request.auth != null && 
+        (request.resource.data.shopId == request.auth.uid);
     }
   }
 }

@@ -106,6 +106,85 @@
     @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8;
   }
 
+  .responsive-grid-4 {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8;
+  }
+
+  /* Enhanced Product Grid Layouts */
+  .product-grid-sm {
+    @apply grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6;
+  }
+
+  .product-grid-md {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8;
+  }
+
+  .product-grid-lg {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8;
+  }
+
+  .product-grid-xl {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 lg:gap-8;
+  }
+
+  /* Masonry-style grid for varied card heights */
+  .product-grid-masonry {
+    @apply columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6 lg:gap-8;
+  }
+
+  .product-grid-masonry > * {
+    @apply break-inside-avoid mb-6 lg:mb-8;
+  }
+
+  /* Compact grid for dense layouts */
+  .product-grid-compact {
+    @apply grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 lg:gap-6;
+  }
+
+  /* Wide grid for featured products */
+  .product-grid-featured {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 lg:gap-10;
+  }
+
+  /* Enhanced responsive behavior */
+  .grid-auto-fit {
+    @apply grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-6 lg:gap-8;
+  }
+
+  .grid-auto-fill {
+    @apply grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-6 lg:gap-8;
+  }
+
+  /* Product card specific utilities */
+  .product-card-featured {
+    @apply lg:col-span-2 lg:row-span-2;
+  }
+
+  .product-card-compact {
+    @apply transform transition-all duration-300 hover:scale-105;
+  }
+
+  .product-card-large {
+    @apply transform transition-all duration-300 hover:scale-105;
+  }
+
+  /* Grid gap utilities */
+  .gap-grid-sm {
+    @apply gap-4 sm:gap-6;
+  }
+
+  .gap-grid-md {
+    @apply gap-6 lg:gap-8;
+  }
+
+  .gap-grid-lg {
+    @apply gap-8 lg:gap-10;
+  }
+
+  .gap-grid-xl {
+    @apply gap-10 lg:gap-12;
+  }
+
   /* Spacing Utilities */
   .space-y-section {
     @apply space-y-16 lg:space-y-24;
@@ -130,6 +209,10 @@
 
   .heading-3 {
     @apply text-2xl md:text-3xl font-semibold text-gray-800 leading-tight;
+  }
+
+  .heading-4 {
+    @apply text-xl md:text-2xl font-semibold text-gray-800 leading-tight;
   }
 
   .body-text {
@@ -274,5 +357,214 @@
 
   .shadow-strong {
     @apply shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15),0_20px_25px_-5px_rgba(0,0,0,0.1)];
+  }
+
+  .shadow-hero {
+    @apply shadow-[0_20px_60px_-10px_rgba(0,0,0,0.2),0_30px_40px_-5px_rgba(0,0,0,0.1)];
+  }
+
+  /* Modern Glass Effects */
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-strong;
+  }
+
+  .glass-button {
+    @apply bg-white/20 backdrop-blur-sm border border-white/30 hover:bg-white/30 transition-all duration-300;
+  }
+
+  /* Enhanced Animations */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-float-delayed {
+    animation: float 6s ease-in-out infinite 2s;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+  }
+
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite alternate;
+  }
+
+  @keyframes glow {
+    from { box-shadow: 0 0 20px rgba(255, 107, 107, 0.3); }
+    to { box-shadow: 0 0 30px rgba(255, 107, 107, 0.6); }
+  }
+
+  /* Modern Gradient Text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-cake-red to-red-600 bg-clip-text text-transparent;
+  }
+
+  .gradient-text-gold {
+    @apply bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent;
+  }
+
+  .gradient-text-blue {
+    @apply bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent;
+  }
+
+  .gradient-text-rainbow {
+    @apply bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent;
+  }
+
+  .gradient-text-dark {
+    @apply bg-gradient-to-r from-slate-900 via-blue-900 to-purple-900 bg-clip-text text-transparent;
+  }
+
+  /* Enhanced Button Styles */
+  .btn-modern {
+    @apply relative overflow-hidden bg-gradient-to-r from-cake-red to-red-600 text-white font-semibold py-4 px-8 rounded-2xl shadow-strong hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1;
+  }
+
+  .btn-modern::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-red-600 to-red-700 opacity-0 transition-opacity duration-300;
+  }
+
+  .btn-modern:hover::before {
+    @apply opacity-100;
+  }
+
+  .btn-modern > * {
+    @apply relative z-10;
+  }
+
+  .btn-modern-blue {
+    @apply relative overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold py-4 px-8 rounded-2xl shadow-strong hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1;
+  }
+
+  .btn-modern-blue::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-0 transition-opacity duration-300;
+  }
+
+  .btn-modern-blue:hover::before {
+    @apply opacity-100;
+  }
+
+  .btn-modern-blue > * {
+    @apply relative z-10;
+  }
+
+  /* Modern Card Styles */
+  .card-modern {
+    @apply bg-white rounded-3xl shadow-soft hover:shadow-strong transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 overflow-hidden;
+  }
+
+  .card-modern::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-br from-cake-red/5 to-cake-pink/10 opacity-0 transition-opacity duration-300;
+  }
+
+  .card-modern:hover::before {
+    @apply opacity-100;
+  }
+
+  /* Enhanced Focus States */
+  .focus-modern:focus {
+    @apply outline-none ring-4 ring-cake-red/30 ring-offset-2 ring-offset-white;
+  }
+
+  /* Modern Scrollbar */
+  .scrollbar-modern::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  .scrollbar-modern::-webkit-scrollbar-track {
+    @apply bg-gray-100 rounded-full;
+  }
+
+  .scrollbar-modern::-webkit-scrollbar-thumb {
+    @apply bg-gradient-to-b from-cake-red to-red-600 rounded-full;
+  }
+
+  .scrollbar-modern::-webkit-scrollbar-thumb:hover {
+    @apply bg-gradient-to-b from-red-600 to-red-700;
+  }
+
+  /* Enhanced Responsive Utilities */
+  .container-responsive {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .text-responsive-hero {
+    @apply text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl;
+  }
+
+  .text-responsive-section {
+    @apply text-3xl sm:text-4xl md:text-5xl;
+  }
+
+  .text-responsive-subsection {
+    @apply text-2xl sm:text-3xl lg:text-4xl;
+  }
+
+  .spacing-responsive {
+    @apply py-16 sm:py-20 md:py-24;
+  }
+
+  .spacing-responsive-small {
+    @apply py-12 sm:py-16 md:py-20;
+  }
+
+  .gap-responsive {
+    @apply gap-6 sm:gap-8;
+  }
+
+  .gap-responsive-small {
+    @apply gap-4 sm:gap-6;
+  }
+
+  .padding-responsive {
+    @apply p-6 sm:p-8 lg:p-12;
+  }
+
+  .padding-responsive-small {
+    @apply p-4 sm:p-6 lg:p-8;
+  }
+
+  /* Mobile-First Button Sizes */
+  .btn-responsive {
+    @apply px-6 py-3 sm:px-8 sm:py-4 text-base sm:text-lg;
+  }
+
+  .btn-responsive-small {
+    @apply px-4 py-2 sm:px-6 sm:py-3 text-sm sm:text-base;
+  }
+
+  /* Responsive Grid Utilities */
+  .grid-responsive-2 {
+    @apply grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8;
+  }
+
+  .grid-responsive-3 {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8;
+  }
+
+  .grid-responsive-4 {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8;
+  }
+
+  /* Responsive Icon Sizes */
+  .icon-responsive {
+    @apply w-4 h-4 sm:w-5 sm:h-5;
+  }
+
+  .icon-responsive-large {
+    @apply w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10;
+  }
+
+  /* Responsive Border Radius */
+  .rounded-responsive {
+    @apply rounded-xl sm:rounded-2xl;
+  }
+
+  .rounded-responsive-large {
+    @apply rounded-2xl sm:rounded-3xl;
   }
 }

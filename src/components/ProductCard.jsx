@@ -5,12 +5,67 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, featured = false, compact = false, large = false, loading = false }) => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { addToCart } = useCart();
   const [isHovered, setIsHovered] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
+
+  // Determine card size classes based on props
+  const getCardClasses = () => {
+    if (featured) {
+      return "card card-hover h-full flex flex-col group relative overflow-hidden lg:min-h-[500px]";
+    }
+    if (compact) {
+      return "card card-hover h-full flex flex-col group relative overflow-hidden";
+    }
+    if (large) {
+      return "card card-hover h-full flex flex-col group relative overflow-hidden lg:min-h-[450px]";
+    }
+    return "card card-hover h-full flex flex-col group relative overflow-hidden";
+  };
+
+  const getImageHeight = () => {
+    if (featured) return "h-80 lg:h-96";
+    if (compact) return "h-48";
+    if (large) return "h-72";
+    return "h-64";
+  };
+
+  const getContentPadding = () => {
+    if (compact) return "p-4";
+    if (large) return "p-8";
+    return "p-6";
+  };
+
+  const getTitleSize = () => {
+    if (featured) return "heading-2";
+    if (compact) return "heading-4";
+    if (large) return "heading-3";
+    return "heading-3";
+  };
+
+  const getButtonSize = () => {
+    if (compact) return "py-3 px-4 text-sm";
+    if (large) return "py-5 px-8 text-lg";
+    return "py-4 px-6";
+  };
+
+  // Loading skeleton
+  if (loading) {
+    return (
+      <div className={getCardClasses()}>
+        <div className={`${getImageHeight()} bg-gray-200 animate-pulse rounded-t-2xl`} />
+        <div className={`${getContentPadding()} flex-1 flex flex-col`}>
+          <div className="h-6 bg-gray-200 rounded animate-pulse mb-4" />
+          <div className="h-8 bg-gray-200 rounded animate-pulse mb-4" />
+          <div className="h-4 bg-gray-200 rounded animate-pulse mb-6 flex-1" />
+          <div className="h-12 bg-gray-200 rounded animate-pulse" />
+        </div>
+      </div>
+    );
+  }
 
   const handleAddToCart = () => {
     if (!currentUser) {
@@ -33,7 +88,7 @@ const ProductCard = ({ product }) => {
 
   return (
     <div 
-      className="card card-hover h-full flex flex-col group relative overflow-hidden"
+      className={getCardClasses()}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -72,13 +127,13 @@ const ProductCard = ({ product }) => {
         <img
           src={product.image}
           alt={product.name}
-          className="w-full h-64 object-cover transition-all duration-500 group-hover:scale-110 group-hover:rotate-1"
+          className={`w-full object-cover transition-all duration-500 group-hover:scale-110 group-hover:rotate-1 ${getImageHeight()}`}
         />
         
         {/* Price Badge */}
         <div className="absolute top-4 right-4 bg-gradient-primary text-white rounded-full px-4 py-2 shadow-strong z-20 group-hover:scale-110 transition-transform duration-300">
           <span className="text-sm font-bold">
-            ${product.price}
+            ₹{product.price}
           </span>
         </div>
 
@@ -104,7 +159,7 @@ const ProductCard = ({ product }) => {
       </div>
       
       {/* Content */}
-      <div className="p-6 flex-1 flex flex-col relative z-10">
+      <div className={`p-6 flex-1 flex flex-col relative z-10 ${getContentPadding()}`}>
         {/* Category Badge */}
         <div className="mb-4">
           <span className="badge badge-secondary group-hover:bg-cake-red group-hover:text-white transition-all duration-300">
@@ -113,7 +168,7 @@ const ProductCard = ({ product }) => {
         </div>
 
         {/* Product Name */}
-        <h3 className="heading-3 mb-4 group-hover:text-cake-red transition-colors duration-300 line-clamp-2 min-h-[3.5rem]">
+        <h3 className={`${getTitleSize()} mb-4 group-hover:text-cake-red transition-colors duration-300 line-clamp-2 min-h-[3.5rem]`}>
           {product.name}
         </h3>
         
@@ -146,7 +201,7 @@ const ProductCard = ({ product }) => {
           </div>
           
           <span className="text-2xl font-bold text-cake-red flex-shrink-0 ml-3 group-hover:scale-110 transition-transform duration-300">
-            ${product.price}
+            ₹{product.price}
           </span>
         </div>
         
@@ -158,7 +213,7 @@ const ProductCard = ({ product }) => {
             product.inStock
               ? 'gradient-primary hover:shadow-strong text-white shadow-medium'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-          }`}
+          } ${getButtonSize()}`}
         >
           {/* Button Background Animation */}
           <div className={`absolute inset-0 bg-gradient-to-r from-red-600 to-red-700 transform scale-x-0 transition-transform duration-300 ${

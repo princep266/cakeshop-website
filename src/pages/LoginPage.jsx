@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { User, Store, Eye, EyeOff, Mail, Lock, ArrowLeft } from 'lucide-react';
 import { signInUser } from '../firebase/auth';
 import { toast } from 'react-toastify';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [userType, setUserType] = useState('customer');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -31,7 +32,15 @@ const LoginPage = () => {
       
       if (result.success) {
         toast.success(result.message);
-        navigate('/');
+        
+        // Check if user is a shop owner and redirect accordingly
+        if (userType === 'shop') {
+          navigate('/shop-owner-home');
+        } else {
+          // Redirect to the page they were trying to access, or home
+          const from = location.state?.from?.pathname || '/';
+          navigate(from);
+        }
       } else {
         toast.error(result.message);
       }

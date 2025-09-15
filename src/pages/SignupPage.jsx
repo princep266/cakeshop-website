@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { User, Store, Eye, EyeOff, Mail, Lock, UserPlus, ArrowLeft, MapPin, Phone, Building } from 'lucide-react';
 import { signUpWithEmailAndPassword } from '../firebase/auth';
 import { toast } from 'react-toastify';
 
 const SignupPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [userType, setUserType] = useState('customer');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -64,7 +65,9 @@ const SignupPage = () => {
       
       if (result.success) {
         toast.success(result.message);
-        navigate('/login');
+        // Redirect to login with the original destination
+        const from = location.state?.from?.pathname || '/';
+        navigate('/login', { state: { from: { pathname: from } } });
       } else {
         toast.error(result.message);
       }

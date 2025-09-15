@@ -9,7 +9,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyADyZ0wO9TW83kAyithfuOdAbGjJd53bgk",
   authDomain: "cakeshop-cbb09.firebaseapp.com",
   projectId: "cakeshop-cbb09",
-  storageBucket: "cakeshop-cbb09.firebasestorage.app",
+  storageBucket: "cakeshop-cbb09.appspot.com",
   messagingSenderId: "545633919091",
   appId: "1:545633919091:web:01b886a0c52bbdfbea0a06",
 };

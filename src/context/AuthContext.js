@@ -41,12 +41,13 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!currentUser,
     isCustomer: userData?.userType === 'customer',
     isShop: userData?.userType === 'shop',
-    isShopApproved: userData?.userType === 'shop' // Removed verification requirement
+    isShopApproved: userData?.userType === 'shop' && userData?.shopInfo?.isApproved === true,
+    canAccessShopFeatures: userData?.userType === 'shop' && userData?.shopInfo?.isApproved === true
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {!loading && (typeof children === 'function' ? children(value) : children)}
     </AuthContext.Provider>
   );
 };

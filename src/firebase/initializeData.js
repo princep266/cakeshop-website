@@ -15,6 +15,9 @@ export const initializeProducts = async () => {
       for (const product of products) {
         await addDoc(collection(db, 'products'), {
           ...product,
+          isActive: true,
+          averageRating: product.averageRating || product.rating || 0,
+          reviewCount: product.reviewCount || product.reviews || 0,
           shopId: 'default-shop', // Default shop ID
           inStock: true,
           inventory: 50,
