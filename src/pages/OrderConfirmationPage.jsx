@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CheckCircle, Package, Calendar, MapPin, Phone, Mail } from 'lucide-react';
+import { CheckCircle, Package, Calendar, MapPin, Phone, Mail, FileText } from 'lucide-react';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { toast } from 'react-toastify';
@@ -10,6 +10,35 @@ const OrderConfirmationPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { orderId, orderData } = location.state || {};
+
+  const handleViewInvoice = () => {
+    if (!orderId || !orderData) return;
+    navigate('/order-invoice', { state: { orderId, orderData } });
+  };
+
+  const paymentInfo = orderData?.paymentInfo || {};
+  const resolvedPaymentMethod = paymentInfo.method || paymentInfo.paymentMethod || orderData?.paymentMethod || 'card';
+  const paymentMethodLabel = (() => {
+    switch (resolvedPaymentMethod) {
+      case 'card':
+        return paymentInfo.displayName || (paymentInfo.cardLast4 ? `Card •••• ${paymentInfo.cardLast4}` : 'Card Payment');
+      case 'upi':
+        return paymentInfo.displayName ? `UPI - ${paymentInfo.displayName}` : paymentInfo.upiId ? `UPI - ${paymentInfo.upiId}` : 'UPI Payment';
+      case 'cod':
+        return 'Cash on Delivery';
+      default:
+        return resolvedPaymentMethod ? resolvedPaymentMethod.toUpperCase() : 'Payment';
+    }
+  })();
+  const paymentStatusLabel = paymentInfo.status ? paymentInfo.status.replace(/_/g, ' ') : null;
+  const formattedPaymentStatus = paymentStatusLabel
+    ? paymentStatusLabel.replace(/\b\w/g, (letter) => letter.toUpperCase())
+    : null;
+  const invoiceNumber = orderData?.invoiceNumber || (orderId ? `INV-${orderId}` : null);
+  const orderSummary = orderData?.orderSummary || { subtotal: 0, shipping: 0, tax: 0, total: 0 };
+  const shippingAddress = orderData?.shippingAddress || {};
+  const orderPlacedDate = orderData?.orderDate ? new Date(orderData.orderDate) : new Date();
+  const estimatedDeliveryDate = orderData?.estimatedDelivery ? new Date(orderData.estimatedDelivery) : null;
 
   // Ensure order data is saved to the database WITHOUT embedding address/payment
   useEffect(() => {
@@ -85,8 +114,13 @@ const OrderConfirmationPage = () => {
               Order #{orderId}
             </div>
             <div className="text-gray-600">
-              Placed on {new Date(orderData.orderDate).toLocaleDateString()}
+              Placed on {orderPlacedDate.toLocaleDateString()}
             </div>
+            {invoiceNumber && (
+              <div className="text-sm text-gray-500 mt-2">
+                Invoice No. {invoiceNumber}
+              </div>
+            )}
           </div>
 
           <div className="responsive-grid-2 gap-8 mb-8">
@@ -98,21 +132,30 @@ const OrderConfirmationPage = () => {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
-                  <span>₹{orderData.orderSummary.subtotal.toFixed(2)}</span>
+                  <span>₹{orderSummary.subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping:</span>
-                  <span>₹{orderData.orderSummary.shipping.toFixed(2)}</span>
+                  <span>₹{orderSummary.shipping.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Tax:</span>
-                  <span>₹{orderData.orderSummary.tax.toFixed(2)}</span>
+                  <span>₹{orderSummary.tax.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between font-bold text-lg border-t pt-3">
                   <span>Total:</span>
-                  <span className="text-cake-red">₹{orderData.orderSummary.total.toFixed(2)}</span>
+                  <span className="text-cake-red">₹{orderSummary.total.toFixed(2)}</span>
                 </div>
               </div>
+              {paymentMethodLabel && (
+                <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-xl">
+                  <div className="text-xs uppercase tracking-wide text-gray-500 mb-1">Payment Method</div>
+                  <div className="font-semibold text-gray-800">{paymentMethodLabel}</div>
+                  {formattedPaymentStatus && (
+                    <div className="text-xs text-gray-500 mt-1">Status: {formattedPaymentStatus}</div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>
@@ -121,11 +164,15 @@ const OrderConfirmationPage = () => {
                 Shipping Address
               </h3>
               <div className="space-y-2 text-gray-700">
-                <div>{orderData.shippingAddress.firstName} {orderData.shippingAddress.lastName}</div>
-                <div>{orderData.shippingAddress.address}</div>
-                <div>
-                  {orderData.shippingAddress.city}, {orderData.shippingAddress.state} {orderData.shippingAddress.zipCode}
-                </div>
+                {(shippingAddress.firstName || shippingAddress.lastName) && (
+                  <div>{shippingAddress.firstName} {shippingAddress.lastName}</div>
+                )}
+                {shippingAddress.address && <div>{shippingAddress.address}</div>}
+                {(shippingAddress.city || shippingAddress.state || shippingAddress.zipCode) && (
+                  <div>
+                    {[shippingAddress.city, shippingAddress.state, shippingAddress.zipCode].filter(Boolean).join(', ')}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -146,7 +193,9 @@ const OrderConfirmationPage = () => {
               <div className="text-center">
                 <div className="text-4xl mb-3">🚚</div>
                 <h4 className="font-semibold mb-2">Delivery</h4>
-                <p className="text-sm text-gray-600">Estimated: {new Date(orderData.estimatedDelivery).toLocaleDateString()}</p>
+                <p className="text-sm text-gray-600">
+                  Estimated: {estimatedDeliveryDate ? estimatedDeliveryDate.toLocaleDateString() : 'To be updated'}
+                </p>
               </div>
             </div>
           </div>
@@ -158,6 +207,13 @@ const OrderConfirmationPage = () => {
             className="btn-primary"
           >
             Continue Shopping
+          </button>
+          <button
+            onClick={handleViewInvoice}
+            className="btn-secondary inline-flex items-center justify-center space-x-2"
+          >
+            <FileText className="w-5 h-5" />
+            <span>View Invoice</span>
           </button>
           <button
             onClick={() => navigate('/orders')}
@@ -172,3 +228,4 @@ const OrderConfirmationPage = () => {
 };
 
 export default OrderConfirmationPage;
+

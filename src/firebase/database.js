@@ -984,18 +984,34 @@ export const saveOrder = async (orderData) => {
     let paymentId = null;
     if (orderData.paymentInfo) {
       try {
-        const paymentRef = await addDoc(collection(db, 'payments'), {
+        const paymentInfo = orderData.paymentInfo || {};
+        const paymentMethod = paymentInfo.method || paymentInfo.paymentMethod || orderData.paymentMethod || 'card';
+        const paymentRecord = {
           userId: orderData.userId,
           orderId: null, // Will be updated after order creation
           type: 'order_payment',
-          cardNumber: orderData.paymentInfo.cardNumber,
-          cardholderName: orderData.paymentInfo.cardholderName,
           amount: orderData.orderSummary?.total || 0,
-          status: 'pending',
-          paymentMethod: 'credit_card',
-          currency: 'USD',
+          status: paymentInfo.status || (paymentMethod === 'cod' ? 'pending' : 'initiated'),
+          paymentMethod,
+          currency: 'INR',
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
+        };
+
+        if (paymentMethod === 'card') {
+          paymentRecord.cardholderName = paymentInfo.cardholderName || '';
+          paymentRecord.cardLast4 = paymentInfo.cardLast4 || paymentInfo.cardNumber || '';
+          paymentRecord.cardNumber = paymentInfo.cardNumber || paymentInfo.cardLast4 || '';
+        } else if (paymentMethod === 'upi') {
+          paymentRecord.upiId = paymentInfo.upiId || '';
+        }
+
+        if (paymentInfo.displayName) {
+          paymentRecord.displayName = paymentInfo.displayName;
+        }
+
+        const paymentRef = await addDoc(collection(db, 'payments'), {
+          ...paymentRecord
         });
         paymentId = paymentRef.id;
         console.log('Payment info saved with ID:', paymentId);
@@ -1006,6 +1022,12 @@ export const saveOrder = async (orderData) => {
     }
     
     // Prepare the order document data (without embedded address/payment/items)
+    const orderDateISO = orderData.orderDate || new Date().toISOString();
+    const estimatedDeliveryISO =
+      orderData.estimatedDelivery || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const paymentInfo = orderData.paymentInfo || {};
+    const paymentMethod = paymentInfo.method || paymentInfo.paymentMethod || orderData.paymentMethod || 'card';
+
     const orderDocument = {
       userId: orderData.userId,
       userEmail: orderData.userEmail,
@@ -1020,8 +1042,9 @@ export const saveOrder = async (orderData) => {
       status: 'pending',
       orderStatus: 'pending',
       deliveryStatus: 'pending',
-      orderDate: new Date().toISOString(),
-      estimatedDelivery: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      orderDate: orderDateISO,
+      estimatedDelivery: estimatedDeliveryISO,
+      paymentMethod,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       timeline: [
@@ -1033,6 +1056,15 @@ export const saveOrder = async (orderData) => {
         }
       ]
     };
+
+    if (orderData.invoiceNumber) {
+      orderDocument.invoiceNumber = orderData.invoiceNumber;
+    }
+
+    if (orderData.shopDetails) {
+      orderDocument.shopDetails = orderData.shopDetails;
+    }
+
     
     console.log('Creating order document with data:', orderDocument);
     console.log('Attempting to add document to orders collection...');
