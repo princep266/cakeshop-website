@@ -20,7 +20,9 @@ import {
   Shield,
   Star,
   Tag,
-  X
+  X,
+  QrCode,
+  Banknote
 } from 'lucide-react';
 
 const CheckoutPage = () => {
@@ -31,6 +33,7 @@ const CheckoutPage = () => {
   const [couponCode, setCouponCode] = useState('');
   const [couponMessage, setCouponMessage] = useState('');
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('card');
 
   const [formData, setFormData] = useState({
     firstName: userData?.firstName || '',
@@ -44,8 +47,30 @@ const CheckoutPage = () => {
     cardNumber: '',
     expiryDate: '',
     cvv: '',
-    cardholderName: ''
+    cardholderName: '',
+    upiId: ''
   });
+
+  const paymentOptions = [
+    {
+      value: 'card',
+      label: 'Credit / Debit Card',
+      description: 'Pay securely using your card',
+      icon: CreditCard
+    },
+    {
+      value: 'upi',
+      label: 'UPI',
+      description: 'Google Pay, PhonePe, BHIM and more',
+      icon: QrCode
+    },
+    {
+      value: 'cod',
+      label: 'Cash on Delivery',
+      description: 'Pay with cash when your order arrives',
+      icon: Banknote
+    }
+  ];
 
   const subtotal = getCartTotal();
   const couponDiscount = getCouponDiscount();
@@ -110,6 +135,39 @@ const CheckoutPage = () => {
       return;
     }
 
+    const sanitizedCardNumber = formData.cardNumber.replace(/\s+/g, '');
+    const trimmedCardholderName = formData.cardholderName.trim();
+    const trimmedExpiryDate = formData.expiryDate.trim();
+    const trimmedCvv = formData.cvv.trim();
+    const trimmedUpiId = formData.upiId.trim();
+
+    if (paymentMethod === 'card') {
+      if (!trimmedCardholderName) {
+        toast.error('Please enter the name on your card');
+        return;
+      }
+
+      if (sanitizedCardNumber.length < 12 || sanitizedCardNumber.length > 19 || !/^\d+$/.test(sanitizedCardNumber)) {
+        toast.error('Please enter a valid card number');
+        return;
+      }
+
+      if (!/^\d{2}\/\d{2}$/.test(trimmedExpiryDate)) {
+        toast.error('Please enter a valid expiry date (MM/YY)');
+        return;
+      }
+
+      if (!/^\d{3,4}$/.test(trimmedCvv)) {
+        toast.error('Please enter a valid CVV');
+        return;
+      }
+    } else if (paymentMethod === 'upi') {
+      if (!trimmedUpiId || !/^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(trimmedUpiId)) {
+        toast.error('Please enter a valid UPI ID (e.g., name@bank)');
+        return;
+      }
+    }
+
     setIsProcessing(true);
 
     try {
@@ -120,6 +178,32 @@ const CheckoutPage = () => {
       console.log('Cart items:', items);
       console.log('Shop ID from first item:', shopId);
       
+      const orderPlacedAt = new Date();
+      const estimatedDeliveryDate = new Date(orderPlacedAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const invoiceNumber = `INV-${orderPlacedAt.getFullYear()}${String(orderPlacedAt.getMonth() + 1).padStart(2, '0')}${String(orderPlacedAt.getDate()).padStart(2, '0')}-${orderPlacedAt.getTime().toString().slice(-6)}`;
+      const shopName = items[0]?.shopName || items[0]?.shop || 'Cake Shop Delight';
+
+      const paymentDetails = {
+        method: paymentMethod,
+        paymentMethod: paymentMethod,
+        status: paymentMethod === 'cod' ? 'pending' : 'initiated',
+        amount: total,
+        currency: 'INR'
+      };
+
+      if (paymentMethod === 'card') {
+        const cardLastFour = sanitizedCardNumber.slice(-4);
+        paymentDetails.cardholderName = trimmedCardholderName;
+        paymentDetails.cardLast4 = cardLastFour;
+        paymentDetails.cardNumber = cardLastFour;
+        paymentDetails.displayName = `Card •••• ${cardLastFour}`;
+      } else if (paymentMethod === 'upi') {
+        paymentDetails.upiId = trimmedUpiId.toLowerCase();
+        paymentDetails.displayName = trimmedUpiId.toLowerCase();
+      } else if (paymentMethod === 'cod') {
+        paymentDetails.displayName = 'Cash on Delivery';
+      }
+
       const orderData = {
         userId: currentUser.uid,
         userEmail: currentUser.email,
@@ -129,9 +213,14 @@ const CheckoutPage = () => {
           price: item.price,
           quantity: item.quantity,
           image: item.image,
-          shopId: item.shopId
+          shopId: item.shopId,
+          shopName: item.shopName || shopName
         })),
         shopId: shopId,
+        shopDetails: {
+          id: shopId,
+          name: shopName
+        },
         shippingAddress: {
           firstName: formData.firstName,
           lastName: formData.lastName,
@@ -145,9 +234,9 @@ const CheckoutPage = () => {
           phone: formData.phone
         },
         paymentInfo: {
-          cardNumber: formData.cardNumber.slice(-4), // Only store last 4 digits
-          cardholderName: formData.cardholderName
+          ...paymentDetails
         },
+        paymentMethod,
         orderSummary: {
           subtotal: subtotal,
           couponDiscount: couponDiscount,
@@ -155,7 +244,10 @@ const CheckoutPage = () => {
           shipping: shipping,
           tax: tax,
           total: total
-        }
+        },
+        orderDate: orderPlacedAt.toISOString(),
+        estimatedDelivery: estimatedDeliveryDate.toISOString(),
+        invoiceNumber
       };
 
       console.log('Submitting order with data:', orderData);
@@ -172,10 +264,17 @@ const CheckoutPage = () => {
           console.log('Order saved successfully with ID:', result.orderId);
           toast.success('Order placed successfully!');
           clearCart();
+          const orderForConfirmation = {
+            ...orderData,
+            trackingId: result.trackingId,
+            orderId: result.orderId,
+            addressId: result.addressId,
+            paymentId: result.paymentId
+          };
           navigate('/order-confirmation', { 
             state: { 
               orderId: result.orderId,
-              orderData: orderData
+              orderData: orderForConfirmation
             } 
           });
         } else {
@@ -501,65 +600,144 @@ const CheckoutPage = () => {
                 
                 <div className="space-y-6">
                   <div>
-                    <label htmlFor="cardholderName" className="form-label">Cardholder Name</label>
-                    <input
-                      type="text"
-                      id="cardholderName"
-                      name="cardholderName"
-                      value={formData.cardholderName}
-                      onChange={handleInputChange}
-                      required
-                      className="form-input"
-                      placeholder="Name on card"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="cardNumber" className="form-label">Card Number</label>
-                    <input
-                      type="text"
-                      id="cardNumber"
-                      name="cardNumber"
-                      value={formData.cardNumber}
-                      onChange={handleInputChange}
-                      required
-                      className="form-input"
-                      placeholder="1234 5678 9012 3456"
-                      maxLength="19"
-                    />
-                  </div>
-                  
-                  <div className="responsive-grid-2 gap-6">
-                    <div>
-                      <label htmlFor="expiryDate" className="form-label">Expiry Date</label>
-                      <input
-                        type="text"
-                        id="expiryDate"
-                        name="expiryDate"
-                        value={formData.expiryDate}
-                        onChange={handleInputChange}
-                        required
-                        className="form-input"
-                        placeholder="MM/YY"
-                        maxLength="5"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label htmlFor="cvv" className="form-label">CVV</label>
-                      <input
-                        type="text"
-                        id="cvv"
-                        name="cvv"
-                        value={formData.cvv}
-                        onChange={handleInputChange}
-                        required
-                        className="form-input"
-                        placeholder="123"
-                        maxLength="4"
-                      />
+                    <label className="form-label block mb-3">Select Payment Method</label>
+                    <div className="grid md:grid-cols-3 gap-4">
+                      {paymentOptions.map(option => {
+                        const Icon = option.icon;
+                        const isActive = paymentMethod === option.value;
+                        return (
+                          <label
+                            key={option.value}
+                            className={`relative border-2 rounded-2xl p-5 cursor-pointer transition-all duration-300 shadow-soft hover:shadow-medium ${
+                              isActive ? 'border-cake-red bg-cake-pink/10 ring-2 ring-cake-pink/30' : 'border-gray-200 hover:border-cake-pink/40'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="paymentMethod"
+                              value={option.value}
+                              checked={isActive}
+                              onChange={() => setPaymentMethod(option.value)}
+                              className="hidden"
+                            />
+                            <div className="flex items-start space-x-4">
+                              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isActive ? 'bg-cake-red text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                <Icon className="w-6 h-6" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-800">{option.label}</h4>
+                                <p className="text-sm text-gray-500 mt-1">{option.description}</p>
+                              </div>
+                            </div>
+                            {isActive && (
+                              <div className="absolute top-4 right-4 text-cake-red font-semibold text-xs uppercase tracking-wide">
+                                Selected
+                              </div>
+                            )}
+                          </label>
+                        );
+                      })}
                     </div>
                   </div>
+
+                  {paymentMethod === 'card' && (
+                    <div className="space-y-6">
+                      <div>
+                        <label htmlFor="cardholderName" className="form-label">Cardholder Name</label>
+                        <input
+                          type="text"
+                          id="cardholderName"
+                          name="cardholderName"
+                          value={formData.cardholderName}
+                          onChange={handleInputChange}
+                          required={paymentMethod === 'card'}
+                          className="form-input"
+                          placeholder="Name on card"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label htmlFor="cardNumber" className="form-label">Card Number</label>
+                        <input
+                          type="text"
+                          id="cardNumber"
+                          name="cardNumber"
+                          value={formData.cardNumber}
+                          onChange={handleInputChange}
+                          required={paymentMethod === 'card'}
+                          className="form-input"
+                          placeholder="1234 5678 9012 3456"
+                          maxLength="19"
+                        />
+                      </div>
+                      
+                      <div className="responsive-grid-2 gap-6">
+                        <div>
+                          <label htmlFor="expiryDate" className="form-label">Expiry Date</label>
+                          <input
+                            type="text"
+                            id="expiryDate"
+                            name="expiryDate"
+                            value={formData.expiryDate}
+                            onChange={handleInputChange}
+                            required={paymentMethod === 'card'}
+                            className="form-input"
+                            placeholder="MM/YY"
+                            maxLength="5"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label htmlFor="cvv" className="form-label">CVV</label>
+                          <input
+                            type="text"
+                            id="cvv"
+                            name="cvv"
+                            value={formData.cvv}
+                            onChange={handleInputChange}
+                            required={paymentMethod === 'card'}
+                            className="form-input"
+                            placeholder="123"
+                            maxLength="4"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {paymentMethod === 'upi' && (
+                    <div className="space-y-4">
+                      <div>
+                        <label htmlFor="upiId" className="form-label">UPI ID</label>
+                        <input
+                          type="text"
+                          id="upiId"
+                          name="upiId"
+                          value={formData.upiId}
+                          onChange={handleInputChange}
+                          required={paymentMethod === 'upi'}
+                          className="form-input"
+                          placeholder="yourname@bank"
+                        />
+                      </div>
+                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-blue-700 text-sm space-y-2">
+                        <p className="font-semibold">Instructions:</p>
+                        <ul className="list-disc pl-5 space-y-1">
+                          <li>After placing the order, you will receive a UPI collect request.</li>
+                          <li>Approve the request within 10 minutes to confirm your payment.</li>
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
+                  {paymentMethod === 'cod' && (
+                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-700 space-y-2">
+                      <p className="font-semibold">Cash on Delivery Selected</p>
+                      <p className="text-sm">
+                        Please keep the exact amount of <span className="font-semibold text-yellow-800">₹{total.toFixed(2)}</span> ready. Our delivery partner will collect the payment upon delivery.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 

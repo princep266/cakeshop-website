@@ -17,17 +17,7 @@ const Footer = () => {
               We create delicious, handcrafted cakes and pastries that bring joy to every celebration. 
               From birthdays to weddings, we make every moment special with our sweet creations.
             </p>
-            <div className="flex space-x-4">
-              <a href="#" className="text-gray-300 hover:text-white transition-colors">
-                <Facebook className="w-5 h-5" />
-              </a>
-              <a href="#" className="text-gray-300 hover:text-white transition-colors">
-                <Instagram className="w-5 h-5" />
-              </a>
-              <a href="#" className="text-gray-300 hover:text-white transition-colors">
-                <Twitter className="w-5 h-5" />
-              </a>
-            </div>
+            
           </div>
 
           {/* Quick Links */}
